@@ -271,8 +271,12 @@ function init(){
   spawnFood();
   updateHUD();
 
-  overlay.innerHTML="<h2>START...</h2>";
-  overlay.innerHTML="<h2>Use arrow keys</h2>";
+overlay.innerHTML = `
+  <h2>START...</h2>
+  <p style="font-size:14px; margin-top:10px;">
+    Use arrow keys to move.
+  </p>
+`;
   loadScrollingScores();
   draw();
 }
