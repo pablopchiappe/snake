@@ -68,7 +68,7 @@ canvas{
   text-align:center;
 }
 
-/* 🔥 BOTONES NEON */
+/*  BOTONES NEON */
 .neon-btn{
   margin-top:10px;
   padding:10px 18px;
@@ -88,7 +88,7 @@ canvas{
   box-shadow:0 0 15px #00ffff;
 }
 
-/* 📜 SCROLL SCORE */
+/* SCROLL SCORE */
 #scrollScores{
   position:absolute;
   bottom:10px;
@@ -475,21 +475,21 @@ async function submitScore(){
 
   const name = nameInput.value || "Anon";
 
-  // 🔒 evitar doble click
+  //  evitar doble click
   saveBtn.disabled = true;
   saveBtn.innerText = "Guardando...";
 
   await saveScore(name);
 
-  // ❌ eliminar input y botón guardar
+  //  eliminar input y botón guardar
   nameInput.remove();
   saveBtn.remove();
 
-  // ⬆️ mover botón reiniciar
+  // ⬆ mover botón reiniciar
   const retryBtn = document.getElementById("retryBtn");
   retryBtn.style.marginTop = "10px";
 
-  // 🏆 mostrar ranking actualizado
+  //  mostrar ranking actualizado
   renderLeaderboard(true);
 }
 
