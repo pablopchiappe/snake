@@ -8,6 +8,36 @@
  <script src="config.js"></script>
  <script src="app.js"></script>
 <style>
+
+#audioControls{
+  display:flex;
+  gap:8px;
+}
+
+.mini-btn{
+  padding:6px 10px;
+  font-size:12px;
+  border-radius:8px;
+  border:1px solid #00ffff;
+  background:rgba(0,0,0,0.3);
+  color:#00ffff;
+  cursor:pointer;
+  box-shadow:0 0 8px #00ffff33;
+  transition:0.2s;
+  backdrop-filter: blur(6px);
+}
+
+.mini-btn:hover{
+  transform:scale(1.05);
+  box-shadow:0 0 12px #00ffff88;
+}
+
+.mini-btn.active{
+  background:#00ffff;
+  color:#000;
+  box-shadow:0 0 15px #00ffff;
+}
+
 body{
   margin:0;
   background:#0f172a;
@@ -46,9 +76,16 @@ body{
 #hud{
   margin-bottom:10px;
   display:flex;
-  gap:20px;
+  justify-content:space-between;
+  align-items:center;
+  width:400px; /* mismo ancho del canvas */
   font-size:18px;
 }
+#leftHud{
+  display:flex;
+  gap:20px;
+}
+
 
 #container{position:relative;}
 
@@ -113,9 +150,18 @@ canvas{
 
 <body>
 
+
+
 <div id="hud">
-  <div id="score">Score: 0</div>
-  <div id="level">Lvl: 1</div>
+  <div id="leftHud">
+    <div id="score">Score: 0</div>
+    <div id="level">Lvl: 1</div>
+  </div>
+
+  <div id="audioControls">
+    <button id="musicBtn" class="mini-btn">🎵</button>
+    <button id="sfxBtn" class="mini-btn">🔊</button>
+  </div>
 </div>
 
 <div id="container">
@@ -131,7 +177,15 @@ canvas{
 <script>
 
 // ===== CONFIG =====
+let musicEnabled = true;
+let sfxEnabled = true;
+let foodSpawnTime = 0;
+let lastTime = 0;
+let moveProgress = 0;
 
+function lerp(a, b, t){
+  return a + (b - a) * t;
+}
 let musicTimer = 0;
 let musicStep = 0;
 let currentSong = 0;
@@ -197,9 +251,9 @@ function beep(f,d){
 }
 
 function updateMusic(){
-  if(!musicOn) return;
+ if(!musicOn || !musicEnabled) return;
 
-  if(Date.now() - musicTimer > speed){ // 👈 sincroniza con velocidad del juego
+  if(Date.now() - musicTimer > speed){ //  sincroniza con velocidad del juego
     const notes = songs[currentSong];
 
     beep(notes[musicStep % notes.length], 0.1);
@@ -209,7 +263,7 @@ function updateMusic(){
   }
 }
 function playEatSound(){
-  if(!musicOn) return;
+if(!musicOn || !sfxEnabled) return;
 
   const o = audioCtx.createOscillator();
   const g = audioCtx.createGain();
@@ -254,11 +308,11 @@ function playGameOverSound(){
 function init(){
   const cx=10,cy=10;
 
-  snake=[
-    {x:cx,y:cy},
-    {x:cx-1,y:cy},
-    {x:cx-2,y:cy}
-  ];
+snake = [
+  {x:cx,y:cy, px:cx, py:cy},
+  {x:cx-1,y:cy, px:cx-1, py:cy},
+  {x:cx-2,y:cy, px:cx-2, py:cy}
+];
 
   velocity={x:0,y:0};
   nextVelocity={x:0,y:0};
@@ -285,7 +339,11 @@ overlay.innerHTML = `
 function spawnFood(){
   while(true){
     const f={x:Math.random()*tiles|0,y:Math.random()*tiles|0};
-    if(!snake.some(s=>s.x===f.x&&s.y===f.y)){food=f;return;}
+    if(!snake.some(s=>s.x===f.x&&s.y===f.y)){
+      food=f;
+      foodSpawnTime = Date.now(); //  ACÁ
+      return;
+    }
   }
 }
 
@@ -308,7 +366,7 @@ document.addEventListener("keydown",e=>{
     document.getElementById("scrollScores").style.display="none";
 
     audioCtx.resume().then(()=>musicOn=true);
-    loop();
+    requestAnimationFrame(loop);
     return;
   }
 
@@ -319,16 +377,29 @@ document.addEventListener("keydown",e=>{
 },{passive:false});
 
 // ===== LOOP =====
-function loop(){
+function loop(time){
   if(gameOver) return;
-  update();
-  updateMusic();
-  draw();
-  setTimeout(loop,speed);
-}
 
+  if(!lastTime) lastTime = time;
+
+  const delta = time - lastTime;
+
+  updateMusic();
+
+  moveProgress += delta / speed;
+
+  if(moveProgress >= 1){
+    updateLogic();
+    moveProgress = 0;
+  }
+
+  drawInterpolated(moveProgress);
+
+  lastTime = time;
+  requestAnimationFrame(loop);
+}
 // ===== UPDATE =====
-function update(){
+function updateLogic(){
   velocity=nextVelocity;
 
   const head={x:snake[0].x+velocity.x,y:snake[0].y+velocity.y};
@@ -339,7 +410,20 @@ function update(){
   snake.unshift(head);
 
   if(head.x===food.x&&head.y===food.y){
-    score+=10;
+    const now = Date.now();
+const diff = (now - foodSpawnTime) / 1000; // en segundos
+
+let points = 10;
+
+if(diff > 1 && diff < 3){
+  points = 30;
+}else if(diff >= 3 && diff < 6){
+  points = 20;
+}else if(diff >= 6){
+  points = 10;
+}
+
+score += points;
     fruits++;
     playEatSound();
     spawnFood();
@@ -360,43 +444,40 @@ function update(){
 
     updateHUD();
   }else snake.pop();
+  snake[0].px = snake[0].x;
+snake[0].py = snake[0].y;
+
+for(let i=1;i<snake.length;i++){
+  snake[i].px = snake[i].x;
+  snake[i].py = snake[i].y;
+}
 }
 
 // ===== DRAW =====
-function draw(){
+function drawInterpolated(t){
   ctx.clearRect(0,0,400,400);
 
-  ctx.fillStyle=currentPalette.bg;
-  ctx.fillRect(0,0,400,400);
-
-  ctx.shadowColor = currentPalette.bg;
-  ctx.shadowBlur = 40;
   ctx.fillStyle = currentPalette.bg;
   ctx.fillRect(0,0,400,400);
-  ctx.shadowColor=currentPalette.snake;
-  ctx.shadowBlur=10;
-  ctx.fillStyle=currentPalette.snake;
+
+  // glow snake
+  ctx.shadowColor = currentPalette.snake;
+  ctx.shadowBlur = 10;
+  ctx.fillStyle = currentPalette.snake;
 
   snake.forEach(s=>{
-    ctx.fillRect(s.x*grid,s.y*grid,grid-2,grid-2);
+    const px = lerp(s.x, s.px, t);
+    const py = lerp(s.y, s.py, t);
+
+    ctx.fillRect(px*grid, py*grid, grid-2, grid-2);
   });
 
-  ctx.shadowColor=currentPalette.food;
-  ctx.shadowBlur=14;
-  ctx.fillStyle=currentPalette.food;
+  // food
+  ctx.shadowColor = currentPalette.food;
+  ctx.shadowBlur = 14;
+  ctx.fillStyle = currentPalette.food;
 
-  ctx.fillRect(food.x*grid,food.y*grid,grid-2,grid-2);
-
-  ctx.shadowBlur=0;
-ctx.globalCompositeOperation = "lighter";
-ctx.fillStyle = currentPalette.bg;
-ctx.globalAlpha = 0.08;
-ctx.fillRect(0,0,400,400);
-
-ctx.globalAlpha = 1;
-ctx.globalCompositeOperation = "source-over";
-
-
+  ctx.fillRect(food.x*grid, food.y*grid, grid-2, grid-2);
 }
 
 // ===== HUD =====
@@ -497,6 +578,20 @@ async function submitScore(){
   //  mostrar ranking actualizado
   renderLeaderboard(true);
 }
+const musicBtn = document.getElementById("musicBtn");
+const sfxBtn = document.getElementById("sfxBtn");
+
+musicBtn.addEventListener("click", () => {
+  musicEnabled = !musicEnabled;
+  musicBtn.classList.toggle("active", musicEnabled);
+});
+
+sfxBtn.addEventListener("click", () => {
+  sfxEnabled = !sfxEnabled;
+  sfxBtn.classList.toggle("active", sfxEnabled);
+});
+musicBtn.classList.add("active");
+sfxBtn.classList.add("active");
 
 // ===== START =====
 init();
