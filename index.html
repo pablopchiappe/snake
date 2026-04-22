@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Snake Neon Pro v19</title>
+
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+ <script src="config.js"></script>
+ <script src="app.js"></script>
+<style>
+body{
+  margin:0;
+  background:#0f172a;
+  color:#e2e8f0;
+  font-family:Arial;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  height:100vh;
+}
+
+#leaderboard{
+  margin-top:15px;
+  padding:12px 18px;
+  background: #5a0fd6; /* violeta vivo */
+  color: #ff00ff; /* magenta */
+  border: 2px solid #ff00ff;
+  box-shadow: 0 0 15px #ff00ff;
+  border-radius: 8px;
+  min-width: 200px;
+  background: linear-gradient(135deg, #5a0fd6, #2a0944);
+}
+
+#leaderboard h3{
+  margin:0 0 8px 0;
+  color:#ffffff;
+  text-shadow: 0 0 8px #ff00ff;
+}
+
+#leaderboard div{
+  margin:4px 0;
+  font-size:14px;
+}
+
+#hud{
+  margin-bottom:10px;
+  display:flex;
+  gap:20px;
+  font-size:18px;
+}
+
+#container{position:relative;}
+
+canvas{
+  border:2px solid #38bdf8;
+  background:transparent;
+}
+
+.overlay{
+  position:absolute;
+  inset:0;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  flex-direction:column;
+  background:transparent;
+  text-align:center;
+}
+
+/*  BOTONES NEON */
+.neon-btn{
+  margin-top:10px;
+  padding:10px 18px;
+  border:2px solid #00ffff;
+  background:transparent;
+  color:#00ffff;
+  cursor:pointer;
+  font-weight:bold;
+  letter-spacing:1px;
+  transition:0.2s;
+  box-shadow:0 0 8px #00ffff;
+}
+
+.neon-btn:hover{
+  background:#00ffff;
+  color:#000;
+  box-shadow:0 0 15px #00ffff;
+}
+
+/* SCROLL SCORE */
+#scrollScores{
+  position:absolute;
+  bottom:10px;
+  width:100%;
+  overflow:hidden;
+  font-size:14px;
+  opacity:0.8;
+}
+
+#scrollContent{
+  display:inline-block;
+  white-space:nowrap;
+  animation:scroll 15s linear infinite;
+}
+
+@keyframes scroll{
+  from{transform:translateX(100%);}
+  to{transform:translateX(-100%);}
+}
+</style>
+</head>
+
+<body>
+
+<div id="hud">
+  <div id="score">Score: 0</div>
+  <div id="level">Lvl: 1</div>
+</div>
+
+<div id="container">
+  <canvas id="game" width="400" height="400"></canvas>
+
+  <div id="overlay" class="overlay"></div>
+
+  <div id="scrollScores">
+    <div id="scrollContent"></div>
+  </div>
+</div>
+
+<script>
+
+// ===== CONFIG =====
+
+let musicTimer = 0;
+let musicStep = 0;
+let currentSong = 0;
+
+const songs = [
+  [220, 330, 440, 330], // lvl 1
+  [330, 440, 550, 440], // lvl 2
+  [440, 550, 660, 550], // lvl 3
+  [660, 550, 440, 330], // lvl 4
+];
+
+
+const ENABLE_COLOR_CHANGE = true;
+
+// ===== SUPABASE =====
+let sb=null;
+console.log("ENV:", window.env);
+try{
+  sb=window.supabase.createClient(
+    window.env.SUPABASE_URL,
+    window.env.SUPABASE_KEY
+  );
+}catch(e){console.error(e);}
+
+// ===== DOM =====
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+const overlay=document.getElementById("overlay");
+const scoreEl=document.getElementById("score");
+const levelEl=document.getElementById("level");
+const scrollContent=document.getElementById("scrollContent");
+
+// ===== GAME =====
+const grid=20, tiles=20;
+
+let snake, velocity, nextVelocity, food;
+let score, level, speed, fruits;
+let started=false, gameOver=false;
+
+// ===== PALETAS =====
+const palettes=[
+  {bg:"#1a1a2e", snake:"#00ffff", food:"#ff0033"},
+  {bg:"#0f3d3e", snake:"#39ff14", food:"#ff00ff"},
+  {bg:"#5a0fd6", snake:"#00bfff", food:"#ffea00"},
+  {bg:"#3a0ca3", snake:"#ff00ff", food:"#00ffcc"},
+];
+
+let currentPalette=palettes[0];
+
+// ===== AUDIO =====
+const audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+let musicOn=false,lastNote=0,step=0;
+
+function beep(f,d){
+  const o=audioCtx.createOscillator();
+  const g=audioCtx.createGain();
+  o.connect(g); g.connect(audioCtx.destination);
+  o.frequency.value=f;
+  g.gain.value=0.05;
+  o.start();
+  g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+d);
+  o.stop(audioCtx.currentTime+d);
+}
+
+function updateMusic(){
+  if(!musicOn) return;
+
+  if(Date.now() - musicTimer > speed){ // 👈 sincroniza con velocidad del juego
+    const notes = songs[currentSong];
+
+    beep(notes[musicStep % notes.length], 0.1);
+
+    musicStep++;
+    musicTimer = Date.now();
+  }
+}
+function playEatSound(){
+  if(!musicOn) return;
+
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+
+  o.connect(g);
+  g.connect(audioCtx.destination);
+
+  o.type = "square";
+  o.frequency.setValueAtTime(600, audioCtx.currentTime);
+  o.frequency.exponentialRampToValueAtTime(900, audioCtx.currentTime + 0.1);
+
+  g.gain.setValueAtTime(0.1, audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+
+  o.start();
+  o.stop(audioCtx.currentTime + 0.15);
+}
+
+function playGameOverSound(){
+  if(!musicOn) return;
+
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+
+  o.connect(g);
+  g.connect(audioCtx.destination);
+
+  o.type = "sawtooth";
+  o.frequency.setValueAtTime(400, audioCtx.currentTime);
+  o.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.5);
+
+  g.gain.setValueAtTime(0.15, audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+
+  o.start();
+  o.stop(audioCtx.currentTime + 0.5);
+}
+
+
+
+// ===== INIT =====
+function init(){
+  const cx=10,cy=10;
+
+  snake=[
+    {x:cx,y:cy},
+    {x:cx-1,y:cy},
+    {x:cx-2,y:cy}
+  ];
+
+  velocity={x:0,y:0};
+  nextVelocity={x:0,y:0};
+
+  score=0; level=1; speed=120; fruits=0;
+  started=false; gameOver=false;
+
+  currentPalette=palettes[0];
+
+  spawnFood();
+  updateHUD();
+
+  overlay.innerHTML="<h2>START...</h2>";
+  loadScrollingScores();
+  draw();
+}
+
+// ===== FOOD =====
+function spawnFood(){
+  while(true){
+    const f={x:Math.random()*tiles|0,y:Math.random()*tiles|0};
+    if(!snake.some(s=>s.x===f.x&&s.y===f.y)){food=f;return;}
+  }
+}
+
+// ===== INPUT =====
+document.addEventListener("keydown",e=>{
+  const map={
+    ArrowUp:{x:0,y:-1},ArrowDown:{x:0,y:1},
+    ArrowLeft:{x:-1,y:0},ArrowRight:{x:1,y:0}
+  };
+
+  if(!map[e.key]) return;
+  e.preventDefault();
+
+  if(!started){
+    started=true;
+    overlay.innerHTML="";
+    velocity=map[e.key];
+    nextVelocity=map[e.key];
+
+    document.getElementById("scrollScores").style.display="none";
+
+    audioCtx.resume().then(()=>musicOn=true);
+    loop();
+    return;
+  }
+
+  const dir=map[e.key];
+  if(velocity.x+dir.x===0&&velocity.y+dir.y===0)return;
+  nextVelocity=dir;
+
+},{passive:false});
+
+// ===== LOOP =====
+function loop(){
+  if(gameOver) return;
+  update();
+  updateMusic();
+  draw();
+  setTimeout(loop,speed);
+}
+
+// ===== UPDATE =====
+function update(){
+  velocity=nextVelocity;
+
+  const head={x:snake[0].x+velocity.x,y:snake[0].y+velocity.y};
+
+  if(head.x<0||head.y<0||head.x>=tiles||head.y>=tiles)return endGame();
+  if(snake.some(s=>s.x===head.x&&s.y===head.y))return endGame();
+
+  snake.unshift(head);
+
+  if(head.x===food.x&&head.y===food.y){
+    score+=10;
+    fruits++;
+    playEatSound();
+    spawnFood();
+
+    if(fruits%5===0){
+      level++;
+      speed=Math.max(50,speed-10);
+    currentSong = (level - 1) % songs.length;
+
+    // reset musical limpio
+    musicStep = 0;
+    musicTimer = 0;
+    
+      if(ENABLE_COLOR_CHANGE){
+        currentPalette=palettes[(level-1)%palettes.length];
+      }
+    }
+
+    updateHUD();
+  }else snake.pop();
+}
+
+// ===== DRAW =====
+function draw(){
+  ctx.clearRect(0,0,400,400);
+
+  ctx.fillStyle=currentPalette.bg;
+  ctx.fillRect(0,0,400,400);
+
+  ctx.shadowColor = currentPalette.bg;
+  ctx.shadowBlur = 40;
+  ctx.fillStyle = currentPalette.bg;
+  ctx.fillRect(0,0,400,400);
+  ctx.shadowColor=currentPalette.snake;
+  ctx.shadowBlur=10;
+  ctx.fillStyle=currentPalette.snake;
+
+  snake.forEach(s=>{
+    ctx.fillRect(s.x*grid,s.y*grid,grid-2,grid-2);
+  });
+
+  ctx.shadowColor=currentPalette.food;
+  ctx.shadowBlur=14;
+  ctx.fillStyle=currentPalette.food;
+
+  ctx.fillRect(food.x*grid,food.y*grid,grid-2,grid-2);
+
+  ctx.shadowBlur=0;
+ctx.globalCompositeOperation = "lighter";
+ctx.fillStyle = currentPalette.bg;
+ctx.globalAlpha = 0.08;
+ctx.fillRect(0,0,400,400);
+
+ctx.globalAlpha = 1;
+ctx.globalCompositeOperation = "source-over";
+
+
+}
+
+// ===== HUD =====
+function updateHUD(){
+  scoreEl.innerText="Score: "+score;
+  levelEl.innerText="Lvl: "+level;
+}
+
+// ===== SUPABASE =====
+async function saveScore(name){
+  const {error}=await sb.from("scores").insert([
+    {player:name,score:score,level:level}
+  ]);
+
+  if(error){
+    alert("Error: "+error.message);
+  }else{
+    renderLeaderboard();
+  }
+}
+
+async function renderLeaderboard(includeLast=false){
+
+  const {data} = await sb.from("scores")
+    .select("*")
+    .order("score",{ascending:false})
+    .limit(5);
+
+  // 🔎 buscamos si ya existe
+  let container = document.getElementById("leaderboard");
+
+  // 👉 si NO existe, lo creamos
+  if(!container){
+    container = document.createElement("div");
+    container.id = "leaderboard";
+
+    // importante: lo agregamos al overlay
+    overlay.appendChild(container);
+  }
+
+  const html = data.map((s,i)=>{
+    const highlight = (includeLast && s.score === score)
+      ? "color:#00ffff;font-weight:bold;"
+      : "";
+
+    return `<div style="${highlight}">
+      ${i+1}. ${s.player} - ${s.score}
+    </div>`;
+  }).join("");
+
+  container.innerHTML = `
+    <h3>TOP SCORES</h3>
+    ${html}
+  `;
+}
+
+// ===== GAME OVER =====
+function endGame(){
+  gameOver = true;
+  playGameOverSound();
+  overlay.innerHTML = `
+    <h2>GAME OVER</h2>
+    <div>${score}</div>
+
+    <input id="name" placeholder="Nombre"/>
+
+    <button id="saveBtn" class="neon-btn" onclick="submitScore()">
+      GUARDAR
+    </button>
+
+
+    <button id="retryBtn" class="neon-btn" onclick="init()">
+      REINTENTAR
+    </button>
+  `;
+}
+
+async function submitScore(){
+  const nameInput = document.getElementById("name");
+  const saveBtn = document.getElementById("saveBtn");
+
+  const name = nameInput.value || "Anon";
+
+  //  evitar doble click
+  saveBtn.disabled = true;
+  saveBtn.innerText = "Guardando...";
+
+  await saveScore(name);
+
+  //  eliminar input y botón guardar
+  nameInput.remove();
+  saveBtn.remove();
+
+  // ⬆ mover botón reiniciar
+  const retryBtn = document.getElementById("retryBtn");
+  retryBtn.style.marginTop = "10px";
+
+  //  mostrar ranking actualizado
+  renderLeaderboard(true);
+}
+
+// ===== START =====
+init();
+
+</script>
+</body>
+</html>
