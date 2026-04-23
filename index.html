@@ -134,7 +134,31 @@ canvas{
   font-size:14px;
   opacity:0.8;
 }
+#blackout{
+  position:absolute;
+  inset:0;
+  opacity:0;
+  pointer-events:none;
+  transition: opacity 0.5s ease;
 
+  background: radial-gradient(circle at center,
+    rgba(255,0,255,0.25),
+   rgba(4, 46, 161, 0.2),
+    rgba(0,0,0,0.95)
+  );
+
+  animation: neonPulse 1.2s infinite alternate;
+  filter: blur(1px);
+}
+
+@keyframes neonPulse{
+  from{
+    filter: blur(1px) brightness(1);
+  }
+  to{
+    filter: blur(2px) brightness(1.4);
+  }
+}
 #scrollContent{
   display:inline-block;
   white-space:nowrap;
@@ -166,7 +190,7 @@ canvas{
 
 <div id="container">
   <canvas id="game" width="400" height="400"></canvas>
-
+  <div id="blackout"></div>
   <div id="overlay" class="overlay"></div>
 
   <div id="scrollScores">
@@ -306,8 +330,12 @@ function playGameOverSound(){
 
 // ===== INIT =====
 function init(){
-  const cx=10,cy=10;
+  overlay.innerHTML = "";
+    const lb = document.getElementById("leaderboard");
+  if (lb) lb.remove();
 
+  const cx=10,cy=10;
+  document.getElementById("blackout").style.opacity = "0";
 snake = [
   {x:cx,y:cy, px:cx, py:cy},
   {x:cx-1,y:cy, px:cx-1, py:cy},
@@ -429,7 +457,8 @@ score += points;
 
     if(fruits%5===0){
       level++;
-      speed=Math.max(50,speed-10);
+     // speed=Math.max(50,speed-10);
+     speed = Math.max(60, 120 - level * 8);
     currentSong = (level - 1) % songs.length;
 
     // reset musical limpio
@@ -498,8 +527,9 @@ async function saveScore(name){
   }
 }
 
-async function renderLeaderboard(includeLast=false){
-
+async function renderLeaderboard(includeLast=false, forceShow=true){
+const existing = document.getElementById("leaderboard");
+if(existing) existing.remove();
   const {data} = await sb.from("scores")
     .select("*")
     .order("score",{ascending:false})
@@ -541,21 +571,20 @@ function renderStartScreen(){
       Use arrow keys to move.
     </p>
 
-    <button id="viewScoresBtn" class="neon-btn">
-      VER SCORES
-    </button>
+  
   `;
 
-  const btn = document.getElementById("viewScoresBtn");
-  btn.onclick = () => renderLeaderboard();
+renderLeaderboard();
 }
+
 
 
 // ===== GAME OVER =====
 function endGame(){
   gameOver = true;
   playGameOverSound();
-
+const blackout = document.getElementById("blackout");
+  blackout.style.opacity = "1";
   overlay.innerHTML = `
     <h2>GAME OVER</h2>
     <div>${score}</div>
