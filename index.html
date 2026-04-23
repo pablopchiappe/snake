@@ -210,12 +210,12 @@ canvas{
     <div id="scrollContent"></div>
   </div>
 </div>
-<div id="version">v1.1</div>
+
 <script>
 
 // ===== CONFIG =====
 localStorage.setItem("snake_name", name);
-
+const VERSION = "v1.9";
 let musicEnabled = true;
 let sfxEnabled = true;
 let foodSpawnTime = 0;
@@ -354,6 +354,11 @@ function playGameOverSound(){
 }
 
 
+const versionEl = document.createElement("div");
+versionEl.id = "version";
+versionEl.innerText = window.APP_VERSION;
+
+document.getElementById("container").after(versionEl);
 
 // ===== INIT =====
 function init(){
@@ -614,7 +619,7 @@ function renderStartScreen(){
   overlay.innerHTML = `
     <h2>START...</h2>
     <p style="font-size:14px; margin-top:10px;">
-      Use arrow keys or awsd to move.
+      Use ⬆️⬇️⬅️➡️ or 🅆 🄰 🅂 🄳 to move.
     </p>
 
   
