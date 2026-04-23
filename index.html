@@ -610,15 +610,17 @@ async function saveScore(name){
 async function renderLeaderboard(includeLast=false, forceShow=true){
 const existing = document.getElementById("leaderboard");
 if(existing) existing.remove();
-  const {data} = await sb.from("scores")
-    .select("*")
-    .order("score",{ascending:false})
-    .limit(5);
+  const { data, error } = await sb.rpc("usp_ranking");
+
+  if (error) {
+    console.error(error);
+    return;
+  }
   if(gameState !== "menu") return;
   //  buscamos si ya existe
   let container = document.getElementById("leaderboard");
 
-  // 👉 si NO existe, lo creamos
+  //  si NO existe, lo creamos
   if(!container){
     container = document.createElement("div");
     container.id = "leaderboard";
@@ -633,7 +635,7 @@ if(existing) existing.remove();
       : "";
 
     return `<div style="${highlight}">
-      ${i+1}. ${s.player} - ${s.score}
+      ${i+1}. ${s.player} - ${s.max_score}
     </div>`;
   }).join("");
 
