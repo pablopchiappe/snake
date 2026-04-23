@@ -18,7 +18,7 @@ export async function handler(event) {
     const body = JSON.parse(event.body);
     const { name, score, level } = body;
 
-    // 🛡️ Validaciones
+    // Validaciones
     if (!name || typeof score !== "number" || typeof level !== "number") {
       return {
         statusCode: 400,
