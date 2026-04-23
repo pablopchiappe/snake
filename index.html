@@ -169,6 +169,18 @@ canvas{
   from{transform:translateX(100%);}
   to{transform:translateX(-100%);}
 }
+
+
+#version{
+  margin-top:8px;
+  font-size:10px;
+  opacity:0.6;
+  color:#00ffff;
+  text-shadow:0 0 5px #00ffff;
+  font-family:monospace;
+}
+
+
 </style>
 </head>
 
@@ -185,6 +197,7 @@ canvas{
   <div id="audioControls">
     <button id="musicBtn" class="mini-btn">🎵</button>
     <button id="sfxBtn" class="mini-btn">🔊</button>
+     <button id="accBtn" class="mini-btn">🎨</button>
   </div>
 </div>
 
@@ -197,12 +210,12 @@ canvas{
     <div id="scrollContent"></div>
   </div>
 </div>
-
+<div id="version">v1.1</div>
 <script>
 
 // ===== CONFIG =====
 localStorage.setItem("snake_name", name);
-let gameState = "menu";
+
 let musicEnabled = true;
 let sfxEnabled = true;
 let foodSpawnTime = 0;
@@ -254,12 +267,22 @@ let score, level, speed, fruits;
 let started=false, gameOver=false;
 
 // ===== PALETAS =====
-const palettes=[
+let  palettes=[   //tiene los colores daltonicos, workaround de un bug
+  {bg:"#000000", snake:"#ffffff", food:"#ffff00"},
+  {bg:"#111111", snake:"#00ffff", food:"#ffffff"},
+  {bg:"#000000", snake:"#ffcc00", food:"#ffffff"},
+  {bg:"#111111", snake:"#ffffff", food:"#00ffff"},
+];
+let  palettesDaltonic=[  //tiene los colores daltonicos, workaround de un bug
   {bg:"#1a1a2e", snake:"#00ffff", food:"#ff0033"},
   {bg:"#0f3d3e", snake:"#39ff14", food:"#ff00ff"},
   {bg:"#5a0fd6", snake:"#00bfff", food:"#ffea00"},
   {bg:"#3a0ca3", snake:"#ff00ff", food:"#00ffcc"},
+
 ];
+
+let palettesOriginal = JSON.parse(JSON.stringify(palettes));
+
 
 let currentPalette=palettes[0];
 
@@ -354,7 +377,8 @@ snake = [
   score=0; level=1; speed=120; fruits=0;
   started=false; gameOver=false;
 
-  currentPalette=palettes[0];
+  //currentPalette=palettes[0];
+  currentPalette = palettes[(level - 1) % palettes.length];
 
   spawnFood();
   updateHUD();
@@ -681,9 +705,14 @@ async function submitScore(){
   //  mostrar ranking actualizado
   renderLeaderboard(true);
 }
+let daltonicMode = true;
+//palettes = daltonicMode ? palettesDaltonic : palettesOriginal;
+palettes = daltonicMode ? palettesDaltonic : palettes;
 
 const musicBtn = document.getElementById("musicBtn");
 const sfxBtn = document.getElementById("sfxBtn");
+const accBtn = document.getElementById("accBtn");
+
 
 musicBtn.addEventListener("click", () => {
   musicEnabled = !musicEnabled;
@@ -694,8 +723,25 @@ sfxBtn.addEventListener("click", () => {
   sfxEnabled = !sfxEnabled;
   sfxBtn.classList.toggle("active", sfxEnabled);
 });
+
+accBtn.addEventListener("click", () => {
+  daltonicMode = !daltonicMode;
+
+  palettes = daltonicMode ? palettesDaltonic : palettesOriginal;
+
+ if(daltonicMode){
+  accBtn.classList.add("active");
+} else {
+  accBtn.classList.remove("active");
+}
+
+  currentPalette = palettes[(level - 1) % palettes.length];
+   drawInterpolated(0);
+});
+
 musicBtn.classList.add("active");
 sfxBtn.classList.add("active");
+accBtn.classList.add("active");
 
 // ===== START =====
 init();
