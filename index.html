@@ -201,12 +201,13 @@ canvas{
 <script>
 
 // ===== CONFIG =====
+let gameState = "menu";
 let musicEnabled = true;
 let sfxEnabled = true;
 let foodSpawnTime = 0;
 let lastTime = 0;
 let moveProgress = 0;
-
+let firstMove = true;
 function lerp(a, b, t){
   return a + (b - a) * t;
 }
@@ -330,8 +331,10 @@ function playGameOverSound(){
 
 // ===== INIT =====
 function init(){
+  gameState = "menu";
+  firstMove = true;
   overlay.innerHTML = "";
-    const lb = document.getElementById("leaderboard");
+  const lb = document.getElementById("leaderboard");
   if (lb) lb.remove();
 
   const cx=10,cy=10;
@@ -374,22 +377,36 @@ function spawnFood(){
 document.addEventListener("keydown",e=>{
 
   if(document.activeElement.tagName === "INPUT") return;
+
   const map={
-    ArrowUp:{x:0,y:-1},ArrowDown:{x:0,y:1},
-    ArrowLeft:{x:-1,y:0},ArrowRight:{x:1,y:0},
-    
-    
+    ArrowUp:{x:0,y:-1},
+    ArrowDown:{x:0,y:1},
+    ArrowLeft:{x:-1,y:0},
+    ArrowRight:{x:1,y:0},
+
+    w:{x:0,y:-1},
+    s:{x:0,y:1},
+    a:{x:-1,y:0},
+    d:{x:1,y:0},
   };
 
-  if(!started && e.key === "ArrowLeft") return;
+const key = e.key;
+
+const dir = map[key] || map[key.toLowerCase()];
+if(!dir) return;
+
+  if(!started && key === "a") return;
   e.preventDefault();
 
   if(!started){
     started=true;
+    gameState = "playing"; 
     overlay.innerHTML="";
-    velocity=map[e.key];
-    nextVelocity=map[e.key];
+    velocity=dir;
+    nextVelocity=dir;
 
+
+    
     document.getElementById("scrollScores").style.display="none";
 
     audioCtx.resume().then(()=>musicOn=true);
@@ -397,9 +414,8 @@ document.addEventListener("keydown",e=>{
     return;
   }
 
-  const dir=map[e.key];
-  if(velocity.x+dir.x===0&&velocity.y+dir.y===0)return;
-  nextVelocity=dir;
+  if(velocity.x + dir.x === 0 && velocity.y + dir.y === 0) return;
+  nextVelocity = dir;
 
 },{passive:false});
 
@@ -432,7 +448,9 @@ function updateLogic(){
   const head={x:snake[0].x+velocity.x,y:snake[0].y+velocity.y};
 
   if(head.x<0||head.y<0||head.x>=tiles||head.y>=tiles)return endGame();
-  if(snake.some(s=>s.x===head.x&&s.y===head.y))return endGame();
+  if(!firstMove){
+    if(snake.some(s=>s.x===head.x&&s.y===head.y)) return endGame();
+  }
 
   snake.unshift(head);
 
@@ -479,6 +497,7 @@ for(let i=1;i<snake.length;i++){
   snake[i].px = snake[i].x;
   snake[i].py = snake[i].y;
 }
+firstMove = false;
 }
 
 // ===== DRAW =====
@@ -534,8 +553,8 @@ if(existing) existing.remove();
     .select("*")
     .order("score",{ascending:false})
     .limit(5);
-
-  // 🔎 buscamos si ya existe
+  if(gameState !== "menu") return;
+  //  buscamos si ya existe
   let container = document.getElementById("leaderboard");
 
   // 👉 si NO existe, lo creamos
@@ -582,6 +601,7 @@ renderLeaderboard();
 // ===== GAME OVER =====
 function endGame(){
   gameOver = true;
+  gameState = "gameover";
   playGameOverSound();
 const blackout = document.getElementById("blackout");
   blackout.style.opacity = "1";
@@ -592,11 +612,11 @@ const blackout = document.getElementById("blackout");
     <input id="name" placeholder="Nombre"/>
 
     <button id="saveBtn" class="neon-btn">
-      GUARDAR
+      Save Score
     </button>
 
     <button id="retryBtn" class="neon-btn">
-      REINTENTAR
+      Try again!
     </button>
   `;
 
