@@ -201,6 +201,7 @@ canvas{
 <script>
 
 // ===== CONFIG =====
+localStorage.setItem("snake_name", name);
 let gameState = "menu";
 let musicEnabled = true;
 let sfxEnabled = true;
@@ -224,7 +225,9 @@ const songs = [
 
 
 const ENABLE_COLOR_CHANGE = true;
-
+function getPlayerName(){
+  return localStorage.getItem("snake_name");
+}
 // ===== SUPABASE =====
 let sb=null;
 console.log("ENV:", window.env);
@@ -587,7 +590,7 @@ function renderStartScreen(){
   overlay.innerHTML = `
     <h2>START...</h2>
     <p style="font-size:14px; margin-top:10px;">
-      Use arrow keys to move.
+      Use arrow keys or awsd to move.
     </p>
 
   
@@ -602,16 +605,20 @@ renderLeaderboard();
 function endGame(){
   gameOver = true;
   gameState = "gameover";
+
   playGameOverSound();
-const blackout = document.getElementById("blackout");
-  blackout.style.opacity = "1";
+
+  document.getElementById("blackout").style.opacity = "1";
+
+  const savedName = localStorage.getItem("snake_name");
+
   overlay.innerHTML = `
     <h2>GAME OVER</h2>
-    <div>${score}</div>
+    <div>${score} - ${savedName || ""}</div>
 
-    <input id="name" placeholder="Nombre"/>
+    ${!savedName ? `<input id="name" placeholder="Name"/>` : ""}
 
-    <button id="saveBtn" class="neon-btn">
+    <button id="saveBtn" class="neon-btn" style="display:${savedName ? "none" : "block"}">
       Save Score
     </button>
 
@@ -620,24 +627,51 @@ const blackout = document.getElementById("blackout");
     </button>
   `;
 
-  document.getElementById("saveBtn").onclick = submitScore;
   document.getElementById("retryBtn").onclick = init;
+
+  const saveBtn = document.getElementById("saveBtn");
+
+  if(savedName){
+    setTimeout(() => {
+  autoSaveScore(savedName);
+}, 50);
+  } else {
+    saveBtn.onclick = submitScore;
+  }
 }
+
+
+async function autoSaveScore(name){
+  try {
+    await saveScore(name);
+    renderLeaderboard(true);
+  } catch (err) {
+    console.error("Auto save failed:", err);
+  }
+}
+
 
 async function submitScore(){
   const nameInput = document.getElementById("name");
   const saveBtn = document.getElementById("saveBtn");
 
-  const name = nameInput.value || "Anon";
+  // 👉 leer nombre guardado si existe
+  let name = localStorage.getItem("snake_name");
+
+  // 👉 si no existe, lo toma del input
+  if(!name){
+    name = nameInput.value || "Anon";
+    localStorage.setItem("snake_name", name);
+  }
 
   //  evitar doble click
   saveBtn.disabled = true;
-  saveBtn.innerText = "Guardando...";
+  saveBtn.innerText = "Saving...";
 
   await saveScore(name);
 
-  //  eliminar input y botón guardar
-  nameInput.remove();
+  // 👉 limpiar input SOLO si existe
+  if(nameInput) nameInput.remove();
   saveBtn.remove();
 
   // ⬆ mover botón reiniciar
@@ -647,6 +681,7 @@ async function submitScore(){
   //  mostrar ranking actualizado
   renderLeaderboard(true);
 }
+
 const musicBtn = document.getElementById("musicBtn");
 const sfxBtn = document.getElementById("sfxBtn");
 
