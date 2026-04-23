@@ -325,12 +325,7 @@ snake = [
   spawnFood();
   updateHUD();
 
-overlay.innerHTML = `
-  <h2>START...</h2>
-  <p style="font-size:14px; margin-top:10px;">
-    Use arrow keys to move.
-  </p>
-`;
+  renderStartScreen();
   loadScrollingScores();
   draw();
 }
@@ -349,12 +344,16 @@ function spawnFood(){
 
 // ===== INPUT =====
 document.addEventListener("keydown",e=>{
+
+  if(document.activeElement.tagName === "INPUT") return;
   const map={
     ArrowUp:{x:0,y:-1},ArrowDown:{x:0,y:1},
-    ArrowLeft:{x:-1,y:0},ArrowRight:{x:1,y:0}
+    ArrowLeft:{x:-1,y:0},ArrowRight:{x:1,y:0},
+    
+    
   };
 
-  if(!map[e.key]) return;
+  if(!started && e.key === "ArrowLeft") return;
   e.preventDefault();
 
   if(!started){
@@ -534,25 +533,46 @@ async function renderLeaderboard(includeLast=false){
   `;
 }
 
+
+function renderStartScreen(){
+  overlay.innerHTML = `
+    <h2>START...</h2>
+    <p style="font-size:14px; margin-top:10px;">
+      Use arrow keys to move.
+    </p>
+
+    <button id="viewScoresBtn" class="neon-btn">
+      VER SCORES
+    </button>
+  `;
+
+  const btn = document.getElementById("viewScoresBtn");
+  btn.onclick = () => renderLeaderboard();
+}
+
+
 // ===== GAME OVER =====
 function endGame(){
   gameOver = true;
   playGameOverSound();
+
   overlay.innerHTML = `
     <h2>GAME OVER</h2>
     <div>${score}</div>
 
     <input id="name" placeholder="Nombre"/>
 
-    <button id="saveBtn" class="neon-btn" onclick="submitScore()">
+    <button id="saveBtn" class="neon-btn">
       GUARDAR
     </button>
 
-
-    <button id="retryBtn" class="neon-btn" onclick="init()">
+    <button id="retryBtn" class="neon-btn">
       REINTENTAR
     </button>
   `;
+
+  document.getElementById("saveBtn").onclick = submitScore;
+  document.getElementById("retryBtn").onclick = init;
 }
 
 async function submitScore(){
