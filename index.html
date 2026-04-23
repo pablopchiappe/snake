@@ -566,17 +566,46 @@ function updateHUD(){
 }
 
 // ===== SUPABASE =====
-async function saveScore(name){
-  const {error}=await sb.from("scores").insert([
-    {player:name,score:score,level:level}
-  ]);
+// async function saveScore(name){
+//   const {error}=await sb.from("scores").insert([
+//     {player:name,score:score,level:level}
+//   ]);
 
-  if(error){
-    alert("Error: "+error.message);
-  }else{
+//   if(error){
+//     alert("Error: "+error.message);
+//   }else{
+//     renderLeaderboard();
+//   }
+// }
+
+async function saveScore(name){
+  try{
+    const res = await fetch("/.netlify/functions/save-score", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        name,
+        score,
+        level
+      })
+    });
+
+    const data = await res.json();
+
+    if(!res.ok){
+      throw new Error(data.error || "Error saving score");
+    }
+
     renderLeaderboard();
+
+  }catch(err){
+    console.error(err);
+    alert("Error guardando score");
   }
 }
+
 
 async function renderLeaderboard(includeLast=false, forceShow=true){
 const existing = document.getElementById("leaderboard");
