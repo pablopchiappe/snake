@@ -47,7 +47,7 @@ export async function handler(event) {
       statusCode: 200,
       body: JSON.stringify({ ok: true })
     };
-
+console.log("SERVICE ROLE:", process.env.SUPABASE_SERVICE_ROLE_KEY?.slice(0, 10));
   } catch (err) {
     return {
       statusCode: 500,
