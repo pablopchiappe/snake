@@ -214,7 +214,7 @@ canvas{
 <script>
 
 // ===== CONFIG =====
-localStorage.setItem("snake_name", name);
+// localStorage.setItem("snake_name", name);
 const VERSION = "v1.9";
 let musicEnabled = true;
 let sfxEnabled = true;
@@ -389,7 +389,7 @@ snake = [
   updateHUD();
 
   renderStartScreen();
-  loadScrollingScores();
+  //loadScrollingScores();
   draw();
 }
 
@@ -435,21 +435,15 @@ if(!dir) return;
   e.preventDefault();
 
   if(!started){
-     let name = localStorage.getItem("snake_name");
+  
+  const savedName = localStorage.getItem("snake_name");
 
-  if(!name){
-    const input = document.getElementById("nameInput");
-    name = input?.value?.trim();
-
-    if(!name){
-      //  bloquea el inicio
-      input.focus();
-      input.style.boxShadow = "0 0 10px red";
-      return;
-    }
-
-    localStorage.setItem("snake_name", name);
-  }
+if(!savedName){
+  const input = document.getElementById("nameInput");
+  input?.focus();
+  if(input) input.style.boxShadow = "0 0 10px red";
+  return;
+}
 
     started=true;
     gameState = "playing"; 
@@ -601,6 +595,13 @@ function updateHUD(){
 async function saveScore(){
   try{
     const playerName = localStorage.getItem("snake_name") || "Anon";
+
+    console.log(" Enviando score:", {
+      name: playerName,
+      score: score,
+      level: level
+    });
+
     const res = await fetch("/.netlify/functions/save-score", {
       method: "POST",
       headers: {
@@ -718,9 +719,9 @@ function renderStartScreen(){
         input.style.boxShadow = "0 0 10px red";
         return;
       }
-
+  localStorage.setItem("snake_name", name);
       
-
+      localStorage.setItem("snake_name", name);
       input.remove();
       btn.remove();
 
@@ -768,7 +769,7 @@ function endGame(){
     </div>
   `;
 
-  document.getElementById("retryBtn").onclick = init;
+  //document.getElementById("retryBtn").onclick = init;
 
   const saveBtn = document.getElementById("saveBtn");
 
