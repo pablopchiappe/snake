@@ -1,6 +1,6 @@
 // config.js
 
-window.APP_VERSION = "v2.31";
+window.APP_VERSION = "v2.32";
 
 window.env = {
   SUPABASE_URL: "https://bbupvsdjgsmwznuumfbk.supabase.co",

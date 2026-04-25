@@ -34,6 +34,15 @@ export async function handler(event) {
     }
 
     const cleanName = name.substring(0, 20);
+    const min = level * 50;
+    const max = level * 150;
+
+    if(score < min || score > max){
+      return {
+        statusCode: 400,
+        body: "cheat detected"
+      };
+    }
     const m=42;
     let v=m*score;
     const { error } = await supabase
