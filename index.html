@@ -407,7 +407,11 @@ function spawnFood(){
 
 // ===== INPUT =====
 document.addEventListener("keydown",e=>{
-
+  if (gameState === "gameover" && (e.code === "Space" || e.key === " ")) {
+    e.preventDefault();
+    init();
+    return;
+  }
   if(document.activeElement.tagName === "INPUT") return;
 
   const map={
@@ -431,6 +435,22 @@ if(!dir) return;
   e.preventDefault();
 
   if(!started){
+     let name = localStorage.getItem("snake_name");
+
+  if(!name){
+    const input = document.getElementById("nameInput");
+    name = input?.value?.trim();
+
+    if(!name){
+      //  bloquea el inicio
+      input.focus();
+      input.style.boxShadow = "0 0 10px red";
+      return;
+    }
+
+    localStorage.setItem("snake_name", name);
+  }
+
     started=true;
     gameState = "playing"; 
     overlay.innerHTML="";
@@ -647,17 +667,76 @@ if(existing) existing.remove();
 
 
 function renderStartScreen(){
+  const savedName = localStorage.getItem("snake_name");
+
   overlay.innerHTML = `
-    <h2>START...</h2>
+    <h2>Snake PRO</h2>
+
+    ${
+      !savedName
+      ? `
+        <div style="display:flex; gap:8px; align-items:center; justify-content:center; margin-top:10px;">
+  <input id="nameInput" placeholder="Enter your name" style="
+    padding:6px 10px;
+    border-radius:8px;
+    border:1px solid #00ffff;
+    background:rgba(0,0,0,0.3);
+    color:#00ffff;
+    outline:none;
+    box-shadow:0 0 8px #00ffff33;
+  "/>
+
+  <button id="saveNameBtn" class="mini-btn">💾</button>
+</div>
+      `
+      : `<div style="margin-top:10px;">Player: <b>${savedName}</b></div>`
+    }
+
     <p style="font-size:14px; margin-top:10px;">
       Use ⬆️⬇️⬅️➡️ or 🅆 🄰 🅂 🄳 to move.
     </p>
-
-  
   `;
 
-renderLeaderboard();
+  const btn = document.getElementById("saveNameBtn");
+  const input = document.getElementById("nameInput");
+
+  if(btn && input){
+
+    setTimeout(()=>input.focus(), 50);
+  //  ENTER guarda
+  input.addEventListener("keydown", (e) => {
+    if(e.key === "Enter"){
+      e.preventDefault();
+      btn.click();
+    }
+  });
+    btn.onclick = () => {
+      const name = input.value.trim();
+
+      if(!name){
+        input.style.boxShadow = "0 0 10px red";
+        return;
+      }
+
+      localStorage.setItem("snake_name", name);
+
+      input.remove();
+      btn.remove();
+
+      const div = document.createElement("div");
+      div.style.marginTop = "10px";
+      div.innerHTML = `Player: <b>${name}</b>`;
+      overlay.insertBefore(div, overlay.children[1]);
+    };
+
+    input.addEventListener("input", () => {
+      input.style.boxShadow = "0 0 8px #00ffff";
+    });
+  }
+
+  renderLeaderboard();
 }
+
 
 
 
@@ -676,15 +755,16 @@ function endGame(){
     <h2>GAME OVER</h2>
     <div>${score} - ${savedName || ""}</div>
 
-    ${!savedName ? `<input id="name" placeholder="Name"/>` : ""}
-
-    <button id="saveBtn" class="neon-btn" style="display:${savedName ? "none" : "block"}">
-      Save Score
-    </button>
-
+    
+ ${/* 
     <button id="retryBtn" class="neon-btn">
       Try again!
     </button>
+      */""}
+
+     <div style="margin-top:8px; font-size:12px; opacity:0.7;">
+     press space to try again
+    </div>
   `;
 
   document.getElementById("retryBtn").onclick = init;
@@ -715,10 +795,10 @@ async function submitScore(){
   const nameInput = document.getElementById("name");
   const saveBtn = document.getElementById("saveBtn");
 
-  // 👉 leer nombre guardado si existe
+  //  leer nombre guardado si existe
   let name = localStorage.getItem("snake_name");
 
-  // 👉 si no existe, lo toma del input
+  //  si no existe, lo toma del input
   if(!name){
     name = nameInput.value || "Anon";
     localStorage.setItem("snake_name", name);
@@ -730,7 +810,7 @@ async function submitScore(){
 
   await saveScore(name);
 
-  // 👉 limpiar input SOLO si existe
+  //  limpiar input SOLO si existe
   if(nameInput) nameInput.remove();
   saveBtn.remove();
 
