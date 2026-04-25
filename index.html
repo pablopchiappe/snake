@@ -623,8 +623,8 @@ async function saveScore(){
     renderLeaderboard();
 
   }catch(err){
-    console.error(err);
-    alert("Error guardando score");
+    // console.error(err);
+    // alert("Error guardando score");
   }
 }
 
@@ -689,16 +689,50 @@ function renderStartScreen(){
   "/>
 
   <button id="saveNameBtn" class="mini-btn">💾</button>
+  
 </div>
       `
-      : `<div style="margin-top:10px;">Player: <b>${savedName}</b></div>`
+      : `<div style="
+  margin-top:10px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  font-size:16px;
+">
+  <span>Player: <b>${savedName}</b></span>
+
+  <button id="resetNameBtn" title="Cambiar nombre" style="
+    cursor:pointer;
+    font-size:12px;
+    padding:2px 6px;
+    border-radius:6px;
+    border:1px solid #00ffff;
+    background:transparent;
+    color:#00ffff;
+    line-height:1;
+  ">
+    ✏️
+  </button>
+</div>
+      `
+      
     }
 
     <p style="font-size:14px; margin-top:10px;">
       Use ⬆️⬇️⬅️➡️ or 🅆 🄰 🅂 🄳 to move.
     </p>
   `;
+if (savedName) {
+  const btn = document.getElementById("resetNameBtn");
 
+  if (btn) {
+    btn.onclick = () => {
+      localStorage.removeItem("snake_name");
+      location.reload();
+    };
+  }
+}
   const btn = document.getElementById("saveNameBtn");
   const input = document.getElementById("nameInput");
 
