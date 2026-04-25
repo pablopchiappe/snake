@@ -32,7 +32,7 @@ export async function handler(event) {
         body: JSON.stringify({ error: "Invalid score" })
       };
     }
-
+ 
     const cleanName = name.substring(0, 20);
     const min = level * 50;
     const max = level * 150;
