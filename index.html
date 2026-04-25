@@ -598,7 +598,7 @@ function updateHUD(){
 //   }
 // }
 
-async function saveScore(name){
+async function saveScore(){
   try{
     const playerName = localStorage.getItem("snake_name") || "Anon";
     const res = await fetch("/.netlify/functions/save-score", {
@@ -800,16 +800,16 @@ async function submitScore(){
   let name = localStorage.getItem("snake_name");
 
   //  si no existe, lo toma del input
-  if(!name){
-    name = nameInput.value || "Anon";
-    localStorage.setItem("snake_name", name);
-  }
+  // if(!name){
+  //   name = nameInput.value || "Anon";
+  //   localStorage.setItem("snake_name", name);
+  // }
 
   //  evitar doble click
   saveBtn.disabled = true;
   saveBtn.innerText = "Saving...";
 
-  await saveScore(name);
+  await saveScore();
 
   //  limpiar input SOLO si existe
   if(nameInput) nameInput.remove();
