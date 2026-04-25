@@ -39,7 +39,7 @@ export async function handler(event) {
     const { error } = await supabase
       .from("scores")
       .insert([
-        { player: cleanName, score, level}
+        { player: cleanName, score, level, v}
       ]);
 
     if (error) throw error;
