@@ -600,6 +600,7 @@ function updateHUD(){
 
 async function saveScore(name){
   try{
+    const playerName = name || localStorage.getItem("snake_name") || "Anon";
     const res = await fetch("/.netlify/functions/save-score", {
       method: "POST",
       headers: {
