@@ -34,11 +34,12 @@ export async function handler(event) {
     }
 
     const cleanName = name.substring(0, 20);
-
+    const m=42;
+    let v=m*score;
     const { error } = await supabase
       .from("scores")
       .insert([
-        { player: cleanName, score, level }
+        { player: cleanName, score, level ,v}
       ]);
 
     if (error) throw error;
