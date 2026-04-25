@@ -774,7 +774,7 @@ function endGame(){
 
   if(savedName){
     setTimeout(() => {
-  autoSaveScore(savedName);
+  autoSaveScore();
 }, 50);
   } else {
     saveBtn.onclick = submitScore;
@@ -782,9 +782,9 @@ function endGame(){
 }
 
 
-async function autoSaveScore(name){
+async function autoSaveScore(){
   try {
-    await saveScore(name);
+    await saveScore();
     renderLeaderboard(true);
   } catch (err) {
     console.error("Auto save failed:", err);
